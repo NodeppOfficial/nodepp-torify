@@ -20,6 +20,15 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
+#ifndef NODEPP_TOR_FETCH_T
+#define NODEPP_TOR_FETCH_T
+namespace nodepp { struct torify_fetch_t : public fetch_t {
+    string_t proxy = "tcp://localhost:9050";
+};}
+#endif
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
 namespace nodepp { namespace torify { namespace http {
 
     promise_t<http_t,except_t> fetch ( const torify_fetch_t& cfg, torify_agent_t* opt=nullptr ) { 
@@ -34,7 +43,7 @@ namespace nodepp { namespace torify { namespace http {
         string_t dip = uri.hostname ; gfc->headers["Host"] = dip;
 
         auto client = tcp_torify_t ([=]( http_t cli ){ 
-            cli.set_timeout( gfc->timeout ); int c = 0; cli.write_header( gfc, dir );
+            cli.set_timeout( gfc->timeout ); cli.write_header( gfc, dir );
 
             if( cli.read_header()==0 ){ res( cli ); return; } else { 
                 rej(except_t("Could not connect to server")); 

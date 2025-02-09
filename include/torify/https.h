@@ -20,6 +20,15 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
+#ifndef NODEPP_TOR_FETCH_T
+#define NODEPP_TOR_FETCH_T
+namespace nodepp { struct torify_fetch_t : public fetch_t {
+    string_t proxy = "tcp://localhost:9050";
+};}
+#endif
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
 namespace nodepp { namespace torify { namespace https {
 
     promise_t<https_t,except_t> fetch ( const torify_fetch_t& cfg, const ssl_t* ctx, torify_agent_t* opt=nullptr ) { 

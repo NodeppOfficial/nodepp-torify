@@ -18,12 +18,9 @@
 
 /*────────────────────────────────────────────────────────────────────────────*/
 
-#ifndef NODEPP_TOR_FETCH_T
-#define NODEPP_TOR_FETCH_T
+#ifndef NODEPP_TOR_AGENT_T
+#define NODEPP_TOR_AGENT_T
 namespace nodepp { struct torify_agent_t : public agent_t {
-    string_t proxy = "tcp://localhost:9050";
-};}
-namespace nodepp { struct torify_fetch_t : public fetch_t {
     string_t proxy = "tcp://localhost:9050";
 };}
 #endif
@@ -44,6 +41,19 @@ protected:
         poll_t                     poll ;
         function_t<void,ssocket_t> func ;
     };  ptr_t<NODE> obj;
+
+    ptr_t<char> htons( uint16 host_short ) const noexcept {
+        if( host_short >= 255 ) { 
+            ptr_t<char> tmp( 3, '\0' );
+            tmp[0] = (char)( host_short >> 8 );
+            tmp[1] = (char)( host_short >> 0 );
+            return tmp; 
+        } else { 
+            ptr_t<char> tmp( 3, '\0' );
+            tmp[1] = (char)( host_short );
+            return tmp;
+        } return nullptr;
+    }
     
 public: tls_torify_t() noexcept : obj( new NODE() ) {}
 
@@ -100,7 +110,7 @@ public: tls_torify_t() noexcept : obj( new NODE() ) {}
         sk.ssl = new ssl_t( obj->ctx, sk.get_fd() ); 
         sk.ssl->set_hostname( host );
 
-        process::task::add([=](){
+        process::poll::add([=](){
             if( self->is_closed() ){ return -1; }
         coStart
 
@@ -114,17 +124,17 @@ public: tls_torify_t() noexcept : obj( new NODE() ) {}
                    if( process::now() > sk.get_send_timeout() )
                      { coEnd; } coNext; }
 
-            do { int len = (int) host.size(); auto sok = (socket_t)sk;
+            do { int  len = type::cast<int>( host.size() );
+                 auto sok = (socket_t)sk;
 
                 sok.write( ptr_t<char>({ 0x05, 0x01, 0x00, 0x00 }) );
                 if( sok.read(2)!=ptr_t<char>({ 0x05, 0x00, 0x00 }) ){ 
                     _EERROR(self->onError,"Error while Handshaking Sock5"); 
-                    coEnd; 
-                }
+                coEnd; } 
 
-                sok.write( ptr_t<char>({ 0x05, 0x01, 0x00, 0x03,  len, 0x00 }) );
-                sok.write( host ); sok.write( ptr_t<char>({ 0x00,port, 0x00 }) );
-                sok.read();
+                sok.write( ptr_t<char>({ 0x05, 0x01, 0x00, 0x03, 0x00 }) );
+                sok.write( ptr_t<char>({ len, 0x00 }) ); sok.write( host );
+                sok.write( htons( port ) ); sok.read();
 
             } while(0);
 
