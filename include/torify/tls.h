@@ -94,7 +94,7 @@ public: tls_torify_t() noexcept : obj( new NODE() ) {}
     void connect( const string_t& host, int port, decltype(NODE::func) cb  ) const noexcept {
         if( obj->state == 1 ){ return; } if( obj->ctx.create_client() == -1 )
           { _EERROR(onError,"Error Initializing SSL context"); close(); return; }
-        if( dns::lookup(host).empty() )
+        if( dns::lookup(obj->agent.proxy).empty() )
           { _EERROR(onError,"dns couldn't get ip"); close(); return; }
 
         auto self = type::bind( this ); obj->state = 1;
@@ -104,8 +104,8 @@ public: tls_torify_t() noexcept : obj( new NODE() ) {}
                   sk.IPPROTO = IPPROTO_TCP;
                   sk.socket( dns::lookup(
                        url::hostname( obj->agent.proxy ) 
-                    ), url::port( obj->agent.proxy )
-                  ); sk.set_sockopt( self->obj->agent );
+                    ), url::port ( obj->agent.proxy )
+                ); sk.set_sockopt( self->obj->agent );
 
         sk.ssl = new ssl_t( obj->ctx, sk.get_fd() ); 
         sk.ssl->set_hostname( host );
@@ -121,8 +121,8 @@ public: tls_torify_t() noexcept : obj( new NODE() ) {}
 
             if( self->obj->poll.push_write(sk.get_fd())==0 )
               { sk.free(); } while( self->obj->poll.emit()==0 ){ 
-                   if( process::now() > sk.get_send_timeout() )
-                     { coEnd; } coNext; }
+            if( process::now() > sk.get_send_timeout() )
+              { coEnd; } coNext; }
 
             do { int  len = type::cast<int>( host.size() );
                  auto sok = (socket_t)sk;

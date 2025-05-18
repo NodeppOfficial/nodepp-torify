@@ -24,7 +24,7 @@ void onMain() {
     tor::http::fetch( args )
 
     .then([]( http_t cli ){
-        console::log( cli.read() );
+        stream::pipe( cli, fs::std_output() );
     })
 
     .fail([]( except_t err ){
