@@ -1,6 +1,13 @@
-# NODEPP-TORIFY
+# NodePP Tor Client: Basic Onion Routing for NodePP
 
-A Simple TOR client for NodePP
+This project provides a fundamental Tor client implementation for the NodePP framework. Tor (The Onion Router) is a network that helps you defend against traffic analysis, a form of network surveillance that threatens personal freedom and privacy, confidential business activities and relationships, and state security. This library aims to allow NodePP applications to route their network traffic through the Tor network for enhanced anonymity and privacy.
+
+## Key Features
+
+- **Basic Tor Connection:** Establishes a connection to the Tor network.
+- **SOCKS5 Proxy Support:** Implements a SOCKS5 proxy client to forward traffic through Tor.
+- **Simple API:** Offers a straightforward interface to connect and send data over Tor within NodePP.
+- **Asynchronous Operations:** Designed to integrate seamlessly with NodePP's asynchronous event loop.
 
 ## Usage 
 ```cpp
