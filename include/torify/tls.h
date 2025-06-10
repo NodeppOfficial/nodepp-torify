@@ -36,6 +36,7 @@ protected:
 
     struct NODE {
         int                        state = 0;
+        int                        accept=-2;
         torify_agent_t             agent;
         ssl_t                      ctx  ; 
         poll_t                     poll ;
@@ -65,28 +66,25 @@ public: tls_torify_t() noexcept : obj( new NODE() ) {}
     
     /*─······································································─*/
 
-    tls_torify_t( decltype(NODE::func) _func, const ssl_t* xtc, torify_agent_t* opt=nullptr )
-    : obj( new NODE() ){ 
+    tls_torify_t( decltype(NODE::func) _func, const ssl_t* xtc, torify_agent_t* opt=nullptr ): obj( new NODE() ){ 
     if( xtc == nullptr ) process::error("Invalid SSL Contenx");
         obj->agent = opt==nullptr ? torify_agent_t():*opt; 
         obj->ctx   = xtc==nullptr ? ssl_t():  *xtc; 
         obj->func  = _func;
     }
 
-    /*─······································································─*/
-    
-    void     close() const noexcept { if( obj->state<=0 ){ return; } obj->state=-1; onClose.emit(); }
+   ~tls_torify_t() noexcept { if( obj.count() > 1 ){ return; } free(); }
 
-    bool is_closed() const noexcept { return obj == nullptr ? 1 : obj->state <= 0; }
+    /*─······································································─*/
+
+    void     close() const noexcept { if(obj->state<=0){return;} obj->state=-1; onClose.emit(); }
+
+    bool is_closed() const noexcept { return obj == nullptr ? 1: obj->state<=0; }
     
     /*─······································································─*/
 
     void listen( const string_t& host, int port, decltype(NODE::func) cb ) const {
          process::error( "servers aren't supported by torify" );
-    }
-
-    void listen( const string_t& host, int port ) const noexcept { 
-         listen( host, port, []( ssocket_t ){} ); 
     }
     
     /*─······································································─*/
@@ -111,15 +109,14 @@ public: tls_torify_t() noexcept : obj( new NODE() ) {}
         sk.ssl->set_hostname( host );
 
         process::poll::add([=](){
-            if( self->is_closed() ){ return -1; }
+            if( self->is_closed() || sk.is_closed() ){ return -1; }
         coStart
 
-            while( sk._connect() == -2 ){ coNext; } 
-            if   ( sk._connect()  <  0 ){ 
+            coWait( sk._connect()==-2 ); if( sk._connect()<=0 ){
                 _EERROR(self->onError,"Error while connecting TLS"); 
             coEnd; }
 
-            if( self->obj->poll.push_write(sk.get_fd())==0 )
+            if( self->obj->poll.push_write( sk.get_fd() ) ==0 )
               { sk.free(); } while( self->obj->poll.emit()==0 ){ 
             if( process::now() > sk.get_send_timeout() )
               { coEnd; } coNext; }
@@ -137,9 +134,8 @@ public: tls_torify_t() noexcept : obj( new NODE() ) {}
                 sok.write( htons( port ) ); sok.read();
 
             } while(0);
-
-            while( sk.ssl->_connect() == -2 ){ coNext; }
-            if   ( sk.ssl->_connect() <=  0 ){ 
+            
+            coWait( sk.ssl->_connect()==-2 ); if( sk.ssl->_connect()<=0 ){
                 _EERROR(self->onError,"Error while handshaking TLS");
             coEnd; } cb( sk );
             
@@ -152,8 +148,23 @@ public: tls_torify_t() noexcept : obj( new NODE() ) {}
 
     }
 
+    /*─······································································─*/
+
     void connect( const string_t& host, int port ) const noexcept { 
          connect( host, port, []( ssocket_t ){} ); 
+    }
+
+    void listen( const string_t& host, int port ) const noexcept { 
+         listen( host, port, []( ssocket_t ){} ); 
+    }
+
+    /*─······································································─*/
+
+    void free() const noexcept {
+        if( is_closed() ){ return; } close();
+        onConnect.clear(); onSocket.clear();
+        onClose  .clear(); onError .clear();
+        onOpen   .clear();
     }
 
 };
@@ -162,24 +173,18 @@ public: tls_torify_t() noexcept : obj( new NODE() ) {}
 
 namespace torify { namespace tls {
 
-    tls_torify_t client( const tls_torify_t& client ){ client.onOpen.once([=]( ssocket_t cli ){
-        cli.onDrain.once([=](){ cli.free(); cli.onData.clear(); });
-        ptr_t<_file_::read> _read = new _file_::read;
-
-        process::poll::add([=](){
-            if(!cli.is_available() )    { cli.close(); return -1; }
-            if((*_read)(&cli)==1 )      { return 1; } 
-            if(  _read->state<=0 )      { return 1; }
-            cli.onData.emit(_read->data); return 1;
-        });
-
-    }); return client; }
+    tls_torify_t client( const tls_torify_t& skt ){ skt.onSocket.once([=]( ssocket_t cli ){
+    process::task::add([=](){ 
+        skt.onConnect.once([=]( ssocket_t cli ){ stream::pipe(cli); });
+        cli.onDrain  .once([=](){ cli.free(); });
+        skt.onConnect.emit(cli);
+    return -1; }); }); return skt; }
 
     /*─······································································─*/
 
     tls_torify_t client( const ssl_t* ctx, torify_agent_t* opt=nullptr ){
-        auto client = tls_torify_t( [=]( ssocket_t /*unused*/ ){}, ctx, opt );
-        tls::client( client ); return client; 
+        auto skt = tls_torify_t( [=]( ssocket_t /*unused*/ ){}, ctx, opt );
+        tls::client( skt ); return skt;
     }
 
 }}

@@ -36,6 +36,7 @@ protected:
 
     struct NODE {
         int                       state = 0;
+        int                       accept=-2;
         torify_agent_t            agent;
         poll_t                    poll ;
         function_t<void,socket_t> func ;
@@ -61,22 +62,20 @@ public: tcp_torify_t() noexcept : obj( new NODE() ) {}
     /*─······································································─*/
     
     tcp_torify_t( decltype(NODE::func) _func, torify_agent_t* opt=nullptr ) noexcept : obj( new NODE() )
-         { obj->func=_func; obj->agent=opt==nullptr?torify_agent_t():*opt; }
+        { obj->func=_func; obj->agent=opt==nullptr?torify_agent_t():*opt; }
+
+   ~tcp_torify_t() noexcept { if( obj.count() > 1 ){ return; } free(); }
     
     /*─······································································─*/
-    
-    void     close() const noexcept { if( obj->state<=0 ){ return; } obj->state=-1; onClose.emit(); }
-    
-    bool is_closed() const noexcept { return obj == nullptr ? 1 : obj->state <= 0; }
+
+    void     close() const noexcept { if(obj->state<=0){return;} obj->state=-1; onClose.emit(); }
+
+    bool is_closed() const noexcept { return obj == nullptr ? 1 :obj->state<=0; }
     
     /*─······································································─*/
 
     void listen( const string_t& host, int port, decltype(NODE::func) cb ) const {
          process::error( "servers aren't supported by torify" );
-    }
-
-    void listen( const string_t& host, int port ) const noexcept { 
-         listen( host, port, []( socket_t ){} ); 
     }
 
     /*─······································································─*/
@@ -96,11 +95,10 @@ public: tcp_torify_t() noexcept : obj( new NODE() ) {}
                 ); sk.set_sockopt( self->obj->agent );
 
         process::poll::add([=](){
-            if( self->is_closed() ){ return -1; }
+            if( self->is_closed() || sk.is_closed() ){ return -1; }
         coStart
 
-            while( sk._connect() == -2 ){ coNext; } 
-            if   ( sk._connect()  <  0 ){ 
+            coWait( sk._connect()==-2 ); if( sk._connect()<=0 ){
                 _EERROR(self->onError,"Error while connecting TCP"); 
             coEnd; }
 
@@ -131,8 +129,23 @@ public: tcp_torify_t() noexcept : obj( new NODE() ) {}
 
     }
 
+    /*─······································································─*/
+
     void connect( const string_t& host, int port ) const noexcept { 
          connect( host, port, [=]( socket_t ){} ); 
+    }
+
+    void listen( const string_t& host, int port ) const noexcept { 
+         listen( host, port, []( socket_t ){} ); 
+    }
+
+    /*─······································································─*/
+
+    void free() const noexcept {
+        if( is_closed() ){ return; } close();
+        onConnect.clear(); onSocket.clear();
+        onClose  .clear(); onError .clear();
+        onOpen   .clear();
     }
 
 };
@@ -141,24 +154,18 @@ public: tcp_torify_t() noexcept : obj( new NODE() ) {}
 
 namespace torify { namespace tcp {
 
-    tcp_torify_t client( const tcp_torify_t& client ){ client.onOpen.once([=]( socket_t cli ){
-        cli.onDrain.once([=](){ cli.free(); cli.onData.clear(); });
-        ptr_t<_file_::read> _read = new _file_::read;
-
-        process::poll::add([=](){
-            if(!cli.is_available() )    { cli.close(); return -1; }
-            if((*_read)(&cli)==1 )      { return 1; }
-            if(  _read->state<=0 )      { return 1; }
-            cli.onData.emit(_read->data); return 1;
-        }); 
-
-    }); return client; }
+    tcp_torify_t client( const tcp_torify_t& skt ){ skt.onSocket.once([=]( socket_t cli ){
+    process::task::add([=](){ 
+        skt.onConnect.once([=]( socket_t cli ){ stream::pipe(cli); });
+        cli.onDrain  .once([=](){ cli.free(); });
+        skt.onConnect.emit(cli);
+    return -1; }); }); return skt; }
 
     /*─······································································─*/
 
     tcp_torify_t client( torify_agent_t* opt=nullptr ){
-        auto client = tcp_torify_t( [=]( socket_t /*unused*/ ){}, opt );
-        tcp::client( client ); return client; 
+        auto skt = tcp_torify_t( [=]( socket_t /*unused*/ ){}, opt );
+        tcp::client( skt ); return skt;
     }
 
 }}

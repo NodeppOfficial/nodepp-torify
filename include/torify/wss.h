@@ -22,30 +22,19 @@
 namespace nodepp { namespace torify { namespace wss {
 
     tls_torify_t client( const string_t& uri, const ssl_t* ssl, torify_agent_t* opt=nullptr ){
-    tls_torify_t srv ( [=]( ssocket_t /*unused*/ ){}, ssl, opt ); 
-        srv.connect( url::hostname(uri), url::port(uri) );
-        srv.onSocket.once([=]( ssocket_t cli ){
-            auto hrv = type::cast<https_t>(cli);
-            if ( !_ws_::client( hrv, uri ) ){ return; }
-            
-            cli.onDrain.once([=](){ cli.free(); cli.onData.clear(); });
-            ptr_t<_file_::read> _read = new _file_::read;
-            cli.set_timeout(0);
+    tls_torify_t skt   ( [=]( ssocket_t /*unused*/ ){}, ssl, opt );
+    skt.onSocket.once  ( [=]( ssocket_t cli ){
 
-            srv.onConnect.once([=]( wss_t ctx ){ process::poll::add([=](){
-                if(!cli.is_available() )    { cli.close(); return -1; }
-                if((*_read)(&ctx)==1 )      { return 1; }
-                if(  _read->state<=0 )      { return 1; }
-                ctx.onData.emit(_read->data); return 1;
-            }); });
+        auto hrv = type::cast<https_t>(cli);
+        if( !_ws_::client( hrv, uri ) ){ return; }
 
-            process::task::add([=](){
-                cli.resume(); srv.onConnect.emit(cli); return -1;
-            });
-            
-        });
-    
-    return srv; }
+    process::task::add([=](){ 
+        skt.onConnect.once([=]( ssocket_t cli ){ stream::pipe(cli); });
+        cli.onDrain  .once([=](){ cli.free(); cli.onData.clear(); });
+        cli.set_timeout(0); cli.resume(); skt.onConnect.emit(cli);
+    return -1; });
+
+    }); skt.connect( url::hostname(uri), url::port(uri) ); return skt; }
 
 }}}
 
