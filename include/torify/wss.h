@@ -28,9 +28,9 @@ namespace nodepp { namespace torify { namespace wss {
         auto hrv = type::cast<https_t>(cli);
         if( !_ws_::client( hrv, uri ) ){ return; }
 
-    process::task::add([=](){ 
-        skt.onConnect.once([=]( ssocket_t cli ){ stream::pipe(cli); });
-        cli.onDrain  .once([=](){ cli.free(); cli.onData.clear(); });
+    process::task::add([=](){
+        cli.onDrain  .once([=](){ cli.free(); });
+        skt.onConnect.once([=]( wss_t cli ){ stream::pipe(cli); });
         cli.set_timeout(0); cli.resume(); skt.onConnect.emit(cli);
     return -1; });
 

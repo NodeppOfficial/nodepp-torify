@@ -43,14 +43,14 @@ protected:
     };  ptr_t<NODE> obj;
 
     ptr_t<char> htons( uint16 host_short ) const noexcept {
-        ptr_t<char> tmp( 3, '\0' ); if( host_short >= 255 ) { 
+        ptr_t<char> tmp( 3, '\0' ); if( host_short >= 255 ) {
             tmp[0] = (char)( host_short >> 8 );
             tmp[1] = (char)( host_short >> 0 );
-        } else { 
+        } else {
             tmp[1] = (char)( host_short );
         } return tmp;
     }
-    
+
 public: tcp_torify_t() noexcept : obj( new NODE() ) {}
 
     event_t<socket_t> onConnect;
@@ -58,20 +58,20 @@ public: tcp_torify_t() noexcept : obj( new NODE() ) {}
     event_t<>         onClose;
     event_t<except_t> onError;
     event_t<socket_t> onOpen;
-    
+
     /*─······································································─*/
-    
+
     tcp_torify_t( decltype(NODE::func) _func, torify_agent_t* opt=nullptr ) noexcept : obj( new NODE() )
         { obj->func=_func; obj->agent=opt==nullptr?torify_agent_t():*opt; }
 
    ~tcp_torify_t() noexcept { if( obj.count() > 1 ){ return; } free(); }
-    
+
     /*─······································································─*/
 
     void     close() const noexcept { if(obj->state<=0){return;} obj->state=-1; onClose.emit(); }
 
     bool is_closed() const noexcept { return obj == nullptr ? 1 :obj->state<=0; }
-    
+
     /*─······································································─*/
 
     void listen( const string_t& host, int port, decltype(NODE::func) cb ) const {
@@ -83,14 +83,14 @@ public: tcp_torify_t() noexcept : obj( new NODE() ) {}
     void connect( const string_t& host, int port, decltype(NODE::func) cb ) const noexcept {
         if( obj->state == 1 ){ return; } if( dns::lookup(obj->agent.proxy).empty() )
           { _EERROR(onError,"dns couldn't get ip"); close(); return; }
-        
+
         auto self = type::bind( this ); obj->state = 1;
 
         socket_t sk;
-                 sk.SOCK    = SOCK_STREAM; 
+                 sk.SOCK    = SOCK_STREAM;
                  sk.IPPROTO = IPPROTO_TCP;
                  sk.socket( dns::lookup(
-                       url::hostname( obj->agent.proxy ) 
+                       url::hostname( obj->agent.proxy )
                     ), url::port ( obj->agent.proxy )
                 ); sk.set_sockopt( self->obj->agent );
 
@@ -99,31 +99,31 @@ public: tcp_torify_t() noexcept : obj( new NODE() ) {}
         coStart
 
             coWait( sk._connect()==-2 ); if( sk._connect()<=0 ){
-                _EERROR(self->onError,"Error while connecting TCP"); 
+                _EERROR(self->onError,"Error while connecting TCP");
             coEnd; }
 
             if( self->obj->poll.push_write(sk.get_fd())==0 )
-              { sk.free(); } while( self->obj->poll.emit()==0 ){ 
+              { sk.free(); } while( self->obj->poll.emit()==0 ){
             if( process::now() > sk.get_send_timeout() )
               { coEnd; } coNext; }
 
             do { int len = type::cast<int>( host.size() );
 
                 sk.write( ptr_t<char>({ 0x05, 0x01, 0x00, 0x00 }) );
-                if( sk.read(2)!=ptr_t<char>({ 0x05, 0x00, 0x00 }) ){ 
-                    _EERROR(self->onError,"Error while Handshaking Sock5"); 
-                coEnd; } 
+                if( sk.read(2)!=ptr_t<char>({ 0x05, 0x00, 0x00 }) ){
+                    _EERROR(self->onError,"Error while Handshaking Sock5");
+                coEnd; }
 
                 sk.write( ptr_t<char>({ 0x05, 0x01, 0x00, 0x03, 0x00 }) );
                 sk.write( ptr_t<char>({ len, 0x00 }) ); sk.write( host );
                 sk.write( htons( port ) ); sk.read();
 
             } while(0); cb( sk );
-            
-            sk.onClose.once([=](){ self->close(); }); 
-            self->onSocket.emit(sk); sk.onOpen.emit(); 
+
+            sk.onClose.once([=](){ self->close(); });
+            self->onSocket.emit(sk); sk.onOpen.emit();
             self->onOpen.emit(sk); self->obj->func(sk);
-            
+
         coStop
         });
 
@@ -131,12 +131,12 @@ public: tcp_torify_t() noexcept : obj( new NODE() ) {}
 
     /*─······································································─*/
 
-    void connect( const string_t& host, int port ) const noexcept { 
-         connect( host, port, [=]( socket_t ){} ); 
+    void connect( const string_t& host, int port ) const noexcept {
+         connect( host, port, [=]( socket_t ){} );
     }
 
-    void listen( const string_t& host, int port ) const noexcept { 
-         listen( host, port, []( socket_t ){} ); 
+    void listen( const string_t& host, int port ) const noexcept {
+         listen( host, port, []( socket_t ){} );
     }
 
     /*─······································································─*/
@@ -144,8 +144,8 @@ public: tcp_torify_t() noexcept : obj( new NODE() ) {}
     void free() const noexcept {
         if( is_closed() ){ return; } close();
         onConnect.clear(); onSocket.clear();
-        onClose  .clear(); onError .clear();
-        onOpen   .clear();
+        onError  .clear(); onOpen  .clear();
+    //  onClose  .clear(); 
     }
 
 };
@@ -155,7 +155,7 @@ public: tcp_torify_t() noexcept : obj( new NODE() ) {}
 namespace torify { namespace tcp {
 
     tcp_torify_t client( const tcp_torify_t& skt ){ skt.onSocket.once([=]( socket_t cli ){
-    process::task::add([=](){ 
+    process::task::add([=](){
         skt.onConnect.once([=]( socket_t cli ){ stream::pipe(cli); });
         cli.onDrain  .once([=](){ cli.free(); });
         skt.onConnect.emit(cli);

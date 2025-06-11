@@ -21,7 +21,7 @@
 
 namespace nodepp { namespace torify { namespace ws {
 
-    tcp_torify_t client( const string_t& uri, torify_agent_t* opt=nullptr ){ 
+    tcp_torify_t client( const string_t& uri, torify_agent_t* opt=nullptr ){
     tcp_torify_t skt   ( [=]( socket_t /*unused*/ ){}, opt );
     skt.onSocket.once  ( [=]( socket_t cli ){
 
