@@ -47,11 +47,11 @@ protected:
     };  ptr_t<NODE> obj;
 
     ptr_t<char> htons( uint16 host_short ) const noexcept {
-        ptr_t<char> tmp( 3, '\0' ); if( host_short >= 255 ) {
-            tmp[0] = (char)( host_short >> 8 );
-            tmp[1] = (char)( host_short >> 0 );
+        ptr_t<char> tmp( 3, '\0' );if( host_short >= 255 ) {
+            tmp[0] = type::cast<char>( host_short >> 8 );
+            tmp[1] = type::cast<char>( host_short >> 0 );
         } else {
-            tmp[1] = (char)( host_short );
+            tmp[1] = type::cast<char>( host_short );
         } return tmp;
     }
 
@@ -106,13 +106,12 @@ public: tls_torify_t() noexcept : obj( new NODE() ) {}
             sk.ssl = new ssl_t( self->obj->ctx, sk.get_fd() );
             sk.ssl->set_hostname( host );
 
-            process::add( coroutine::add( COROUTINE(){
-            int c=0; coBegin; coWait(!limit::fileno_ready());
+            process::poll( sk, POLL_STATE::WRITE, coroutine::add( COROUTINE(){
+            int c=0; coBegin
 
                 coWait( (c=sk._connect())==-2 ); if( c<=0 ){
                     self->onError.emit("Error while connecting TLS");
-                    self->close(); coEnd;
-                }
+                coEnd; }
 
                 do{ int  len = type::cast<int>( host.size() );
                     auto sok = type::cast<socket_t>( sk );
@@ -122,9 +121,11 @@ public: tls_torify_t() noexcept : obj( new NODE() ) {}
                         self->onError.emit("Error while Handshaking Sock5");
                     coEnd; }
 
-                    sok.write( ptr_t<char>({ 0x05, 0x01, 0x00, 0x03, 0x00 }) );
-                    sok.write( ptr_t<char>({ len, 0x00 }) ); sok.write( host );
-                    sok.write( htons( port ) ); sok.read();
+                    string_t data = string_t( ptr_t<char>({ 0x05, 0x01, 0x00, 0x03, 0x00 }) )
+                                  + string_t( ptr_t<char>({ len, 0x00 }) ) + string_t( host ) 
+                                  + string_t( htons( port ) ); 
+                    
+                    sok.write(data); sok.read( /**/ );
 
                 } while(0);
 
@@ -132,7 +133,7 @@ public: tls_torify_t() noexcept : obj( new NODE() ) {}
                     self->onError.emit("Error while handshaking TLS");
                 coEnd; }
 
-                sk.onDrain.once([=](){ self->close(); }); cb( sk );
+                sk.onDrain.once([=](){ self->close(); }); cb(sk);
                 self->onSocket.emit(sk); self->obj->func(sk);
 
                 if( sk.is_available() ){ 
@@ -143,13 +144,7 @@ public: tls_torify_t() noexcept : obj( new NODE() ) {}
 
             coFinish }));
 
-        };
-
-        process::add( coroutine::add( COROUTINE(){
-        coBegin; coWait( !limit::fileno_ready() );
-                 clb();
-        coFinish
-        }));
+        }; clb();
 
     }
 

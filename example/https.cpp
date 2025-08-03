@@ -8,9 +8,11 @@ void onMain() {
  
     torify_fetch_t args; ssl_t ssl;
     args.timeout = 0; // Disable Fetch timeout
-    args.method  = "GET";
+    
     args.url     = "https://www.google.com/";
     args.proxy   = "tcp://localhost:9050";
+    args.method  = "GET";
+
     args.headers = header_t({
         { "Host", url::hostname( args.url ) },
         { "User-Agent", "Torify" }

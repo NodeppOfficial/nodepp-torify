@@ -46,11 +46,11 @@ protected:
     };  ptr_t<NODE> obj;
 
     ptr_t<char> htons( uint16 host_short ) const noexcept {
-        ptr_t<char> tmp( 3, '\0' ); if( host_short >= 255 ) {
-            tmp[0] = (char)( host_short >> 8 );
-            tmp[1] = (char)( host_short >> 0 );
+        ptr_t<char> tmp( 3, '\0' );if( host_short >= 255 ) {
+            tmp[0] = type::cast<char>( host_short >> 8 );
+            tmp[1] = type::cast<char>( host_short >> 0 );
         } else {
-            tmp[1] = (char)( host_short );
+            tmp[1] = type::cast<char>( host_short );
         } return tmp;
     }
 
@@ -100,13 +100,12 @@ public: tcp_torify_t() noexcept : obj( new NODE() ) {}
                 self->close(); sk.free(); return; 
             }   sk.set_sockopt( self->obj->agent );
 
-            process::add( coroutine::add( COROUTINE(){
-            int c=0; coBegin; coWait(!limit::fileno_ready());
+            process::poll( sk, POLL_STATE::WRITE, coroutine::add( COROUTINE(){
+            int c=0; coBegin
 
                 coWait( (c=sk._connect())==-2 ); if( c<=0 ){
                     self->onError.emit("Error while connecting TCP");
-                    self->close(); coEnd;
-                }
+                coEnd; }
 
                 do { int len = type::cast<int>( host.size() );
 
@@ -115,9 +114,11 @@ public: tcp_torify_t() noexcept : obj( new NODE() ) {}
                         self->onError.emit("Error while Handshaking Sock5");
                     coEnd; }
 
-                    sk.write( ptr_t<char>({ 0x05, 0x01, 0x00, 0x03, 0x00 }) );
-                    sk.write( ptr_t<char>({ len, 0x00 }) ); sk.write( host );
-                    sk.write( htons( port ) ); sk.read();
+                    string_t data = string_t( ptr_t<char>({ 0x05, 0x01, 0x00, 0x03, 0x00 }) )
+                                  + string_t( ptr_t<char>({ len, 0x00 }) ) + string_t( host ) 
+                                  + string_t( htons( port ) );
+                    
+                    sk.write(data); sk.read( /**/ );
 
                 } while(0);
 
@@ -132,13 +133,7 @@ public: tcp_torify_t() noexcept : obj( new NODE() ) {}
 
             coFinish }));
 
-        };
-
-        process::add( coroutine::add( COROUTINE(){
-        coBegin; coWait( !limit::fileno_ready() );
-                 clb();
-        coFinish
-        }));
+        }; clb();
 
     }
 

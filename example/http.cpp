@@ -8,6 +8,7 @@ void onMain() {
  
     torify_fetch_t args;
     args.timeout = 0; // Disable Fetch timeout
+    
     args.url     = "http://www.google.com/";
     args.proxy   = "tcp://localhost:9050";
     args.method  = "GET";

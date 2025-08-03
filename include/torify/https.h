@@ -46,10 +46,10 @@ namespace nodepp { namespace torify { namespace https {
         auto skt = tls_torify_t ([=]( https_t cli ){ 
 
             cli.set_timeout( fetch->timeout ); cli.write_header( fetch, dir );
-            int c=0; while((c=cli.read_header())==1){}
+            int c=0; while((c=cli.read_header())==1){ process::next(); }
 
-            if( c!=0 ){ rej(except_t("Could not connect to server")); }
-            else      { res( cli ); }
+            if( c==0 ){ res( cli ); return; } cli.close();
+            rej(except_t("Could not connect to server"));
             
         }, ssl, &agent );
 
