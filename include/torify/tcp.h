@@ -39,7 +39,7 @@ private:
 protected:
 
     struct NODE {
-        int            state = 0;
+        char           state = 0;
         int            accept=-2;
         torify_agent_t agent;
         NODE_CLB       func ;
