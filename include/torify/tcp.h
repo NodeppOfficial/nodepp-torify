@@ -40,7 +40,6 @@ protected:
 
     struct NODE {
         char           state = 0;
-        int            accept=-2;
         torify_agent_t agent;
         NODE_CLB       func ;
     };  ptr_t<NODE> obj;
@@ -67,7 +66,8 @@ public: tcp_torify_t() noexcept : obj( new NODE() ) {}
    ~tcp_torify_t() noexcept { if( obj.count() > 1 ){ return; } free(); }
 
     tcp_torify_t( NODE_CLB _func, torify_agent_t* opt=nullptr ) noexcept : obj( new NODE() ) {
-        obj->agent = (opt==nullptr) ? torify_agent_t() : *opt; obj->func = _func;
+        obj->agent = (opt==nullptr) ? torify_agent_t() : *opt; 
+        obj->func  = _func; /*------------------------------*/
     }
 
     /*─······································································─*/
@@ -97,7 +97,7 @@ public: tcp_torify_t() noexcept : obj( new NODE() ) {}
                 url::hostname( self->obj->agent.proxy ) ), 
                 url::port    ( self->obj->agent.proxy ) )<0 
             ) { self->onError.emit("Error while creating TCP"); 
-                self->close(); sk.free(); return; 
+                self->close(); sk.free(); return -1; 
             }   sk.set_sockopt( self->obj->agent );
 
             process::poll( sk, POLL_STATE::WRITE, coroutine::add( COROUTINE(){
@@ -133,7 +133,7 @@ public: tcp_torify_t() noexcept : obj( new NODE() ) {}
 
             coFinish }));
 
-        }; clb();
+        return -1; }; process::foop( clb );
 
     }
 

@@ -31,8 +31,9 @@ namespace nodepp { struct torify_fetch_t : public fetch_t {
 
 namespace nodepp { namespace torify { namespace https {
 
-    promise_t<https_t,except_t> fetch ( const torify_fetch_t& args, const ssl_t& ssl, torify_agent_t* opt=nullptr ) { 
-           auto agent = type::bind( opt==nullptr? torify_agent_t(): *opt ); auto fetch = type::bind( args ); 
+    promise_t<https_t,except_t> fetch ( const torify_fetch_t& args, ssl_t* ssl=nullptr, torify_agent_t* opt=nullptr ) {
+           auto agent = type::bind( opt==nullptr ? torify_agent_t():*opt ); 
+           auto cert  = type::bind( ssl ); auto fetch = type::bind( args );
     return promise_t<https_t,except_t>([=]( function_t<void,https_t> res, function_t<void,except_t> rej ){
 
         if( !url::is_valid( fetch->url ) ){ rej(except_t("invalid URL")); return; }
@@ -51,7 +52,7 @@ namespace nodepp { namespace torify { namespace https {
             if( c==0 ){ res( cli ); return; } cli.close();
             rej(except_t("Could not connect to server"));
             
-        }, ssl, &agent );
+        }, &cert, &agent );
 
         skt.onError([=]( except_t error ){ rej(error); });
         skt.connect( dip, uri.port );

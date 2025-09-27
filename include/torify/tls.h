@@ -40,7 +40,6 @@ protected:
 
     struct NODE {
         char           state = 0;
-        int            accept=-2;
         torify_agent_t agent;
         ssl_t          ctx  ;
         NODE_CLB       func ;
@@ -67,8 +66,9 @@ public: tls_torify_t() noexcept : obj( new NODE() ) {}
 
    ~tls_torify_t() noexcept { if( obj.count() > 1 ){ return; } free(); }
 
-    tls_torify_t( NODE_CLB _func, const ssl_t& ssl, torify_agent_t* opt=nullptr ) : obj( new NODE() ) {
-        obj->agent = (opt==nullptr) ? torify_agent_t() : *opt; obj->ctx = ssl; obj->func = _func;
+    tls_torify_t( NODE_CLB _func, ssl_t* ssl=nullptr, torify_agent_t* opt=nullptr ) : obj( new NODE() ) {
+        obj->agent = (opt==nullptr) ? torify_agent_t() : *opt; /*--------------*/
+        obj->ctx   = (ssl==nullptr) ? ssl_t() /*----*/ : *ssl; obj->func = _func;
     }
 
     /*─······································································─*/
@@ -100,7 +100,7 @@ public: tls_torify_t() noexcept : obj( new NODE() ) {}
                 url::hostname( self->obj->agent.proxy ) ), 
                 url::port    ( self->obj->agent.proxy ) )<0 
             ) { self->onError.emit("Error while creating TLS"); 
-                self->close(); sk.free(); return; 
+                self->close(); sk.free(); return -1; 
             }   sk.set_sockopt( self->obj->agent );
 
             sk.ssl = new ssl_t( self->obj->ctx, sk.get_fd() );
@@ -144,7 +144,7 @@ public: tls_torify_t() noexcept : obj( new NODE() ) {}
 
             coFinish }));
 
-        }; clb();
+        return -1; }; process::foop( clb );
 
     }
 
@@ -172,7 +172,7 @@ public: tls_torify_t() noexcept : obj( new NODE() ) {}
 
 namespace torify { namespace tls {
 
-    tls_torify_t client( const ssl_t& ssl, torify_agent_t* opt=nullptr ){
+    tls_torify_t client( ssl_t* ssl=nullptr, torify_agent_t* opt=nullptr ){
         auto skt = tls_torify_t( [=]( ssocket_t ){}, ssl, opt ); return skt;
     }
 

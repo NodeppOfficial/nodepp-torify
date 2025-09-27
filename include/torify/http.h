@@ -32,7 +32,8 @@ namespace nodepp { struct torify_fetch_t : public fetch_t {
 namespace nodepp { namespace torify { namespace http {
 
     promise_t<http_t,except_t> fetch ( const torify_fetch_t& args, torify_agent_t* opt=nullptr ) { 
-           auto agent = type::bind( opt==nullptr? torify_agent_t(): *opt ); auto fetch = type::bind( args ); 
+           auto agent = type::bind( opt==nullptr ? torify_agent_t():*opt ); 
+           auto fetch = type::bind( args ); /*---------------------------*/
     return promise_t<http_t,except_t>([=]( function_t<void,http_t> res, function_t<void,except_t> rej ){
 
         if( !url::is_valid( fetch->url ) ){ rej(except_t("invalid URL")); return; }

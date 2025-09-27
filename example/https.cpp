@@ -18,7 +18,7 @@ void onMain() {
         { "User-Agent", "Torify" }
     });
 
-    torify::https::fetch( args, ssl )
+    torify::https::fetch( args, &ssl )
 
     .then([]( https_t cli ){
         console::log( stream::await( cli ) );

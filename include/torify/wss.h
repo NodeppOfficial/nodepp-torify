@@ -21,7 +21,7 @@
 
 namespace nodepp { namespace torify { namespace wss {
 
-    tls_torify_t client( const string_t& uri, const ssl_t* ssl, torify_agent_t* opt=nullptr ){
+    tls_torify_t client( const string_t& uri, ssl_t* ssl=nullptr, torify_agent_t* opt=nullptr ){
     tls_torify_t skt   ( [=]( ssocket_t /*unused*/ ){}, ssl, opt );
     skt.onSocket.once  ( [=]( ssocket_t cli ){
 
