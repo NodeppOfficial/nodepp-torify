@@ -78,13 +78,13 @@ public: tls_torify_t() noexcept : obj( new NODE() ) {}
 
     /*─······································································─*/
 
-    void listen( const string_t& host, int port, NODE_CLB cb ) const {
+    void listen( const string_t& host, int port, NODE_CLB cb=nullptr ) const {
          process::error( "servers aren't supported by torify" );
     }
 
     /*─······································································─*/
 
-    void connect( const string_t& host, int port, NODE_CLB cb ) const noexcept {
+    void connect( const string_t& host, int port, NODE_CLB cb=nullptr ) const noexcept {
         if( obj->state == 1 ){ return; } if( obj->ctx.create_client() == -1 )
           { onError.emit("Error Initializing SSL context"); close(); return; }
         if( dns::lookup(obj->agent.proxy).empty() )
@@ -150,16 +150,6 @@ public: tls_torify_t() noexcept : obj( new NODE() ) {}
 
     /*─······································································─*/
 
-    void connect( const string_t& host, int port ) const noexcept {
-         connect( host, port, []( ssocket_t ){} );
-    }
-
-    void listen( const string_t& host, int port ) const noexcept {
-         listen( host, port, []( ssocket_t ){} );
-    }
-
-    /*─······································································─*/
-
     void free() const noexcept {
         if( is_closed() ){ return; }close();
         onConnect.clear(); onSocket.clear();
@@ -173,7 +163,7 @@ public: tls_torify_t() noexcept : obj( new NODE() ) {}
 namespace torify { namespace tls {
 
     tls_torify_t client( ssl_t* ssl=nullptr, torify_agent_t* opt=nullptr ){
-        auto skt = tls_torify_t( [=]( ssocket_t ){}, ssl, opt ); return skt;
+        auto skt = tls_torify_t( nullptr, ssl, opt ); return skt;
     }
 
 }}

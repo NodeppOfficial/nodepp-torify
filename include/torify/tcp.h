@@ -77,13 +77,13 @@ public: tcp_torify_t() noexcept : obj( new NODE() ) {}
 
     /*─······································································─*/
 
-    void listen( const string_t& host, int port, NODE_CLB cb ) const {
+    void listen( const string_t& host, int port, NODE_CLB cb=nullptr ) const {
          process::error( "servers aren't supported by torify" );
     }
 
     /*─······································································─*/
 
-    void connect( const string_t& host, int port, NODE_CLB cb ) const noexcept {
+    void connect( const string_t& host, int port, NODE_CLB cb=nullptr ) const noexcept {
         if( obj->state == 1 ){ return; } if( dns::lookup(obj->agent.proxy).empty() )
           { onError.emit("dns couldn't get ip"); close(); return; }
 
@@ -139,16 +139,6 @@ public: tcp_torify_t() noexcept : obj( new NODE() ) {}
 
     /*─······································································─*/
 
-    void connect( const string_t& host, int port ) const noexcept {
-         connect( host, port, []( socket_t ){} );
-    }
-
-    void listen( const string_t& host, int port ) const noexcept {
-         listen( host, port, []( socket_t ){} );
-    }
-
-    /*─······································································─*/
-
     void free() const noexcept {
         if( is_closed() ){ return; }close();
         onConnect.clear(); onSocket.clear();
@@ -162,7 +152,7 @@ public: tcp_torify_t() noexcept : obj( new NODE() ) {}
 namespace torify { namespace tcp {
 
     tcp_torify_t client( torify_agent_t* opt=nullptr ){
-        auto skt = tcp_torify_t( [=]( socket_t ){}, opt ); return skt;
+        auto skt = tcp_torify_t( nullptr, opt ); return skt;
     }
 
 }}

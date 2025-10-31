@@ -22,7 +22,7 @@
 namespace nodepp { namespace torify { namespace wss {
 
     tls_torify_t client( const string_t& uri, ssl_t* ssl=nullptr, torify_agent_t* opt=nullptr ){
-    tls_torify_t skt   ( [=]( ssocket_t /*unused*/ ){}, ssl, opt );
+    tls_torify_t skt   ( nullptr, ssl, opt );
     skt.onSocket.once  ( [=]( ssocket_t cli ){
 
         auto hrv = type::cast<https_t>(cli);
