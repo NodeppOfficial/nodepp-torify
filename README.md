@@ -1,6 +1,34 @@
 # NodePP Tor Client: Basic Onion Routing for NodePP
-
 This project provides a fundamental Tor client implementation for the NodePP framework. Tor (The Onion Router) is a network that helps you defend against traffic analysis, a form of network surveillance that threatens personal freedom and privacy, confidential business activities and relationships, and state security. This library aims to allow NodePP applications to route their network traffic through the Tor network for enhanced anonymity and privacy.
+
+🔗: [Go Anonymous: Fetching Data Over Tor with Nodepp](https://medium.com/@EDBCBlog/go-anonymous-fetching-data-over-tor-with-nodepp-4252095ed38a)
+
+## Dependencies & Cmake Integration
+```bash
+include(FetchContent)
+
+FetchContent_Declare(
+	nodepp
+	GIT_REPOSITORY   https://github.com/NodeppOfficial/nodepp
+	GIT_TAG          origin/main
+	GIT_PROGRESS     ON
+)
+FetchContent_MakeAvailable(nodepp)
+
+FetchContent_Declare(
+	nodepp-torify
+	GIT_REPOSITORY   https://github.com/NodeppOfficial/nodepp-torify
+	GIT_TAG          origin/main
+	GIT_PROGRESS     ON
+)
+FetchContent_MakeAvailable(nodepp-torify)
+
+#[...]
+
+target_link_libraries( #[...]
+	PUBLIC nodepp nodepp-torify #[...]
+)
+```
 
 ## Key Features
 
@@ -44,9 +72,8 @@ void onMain() {
 ## Build & Run
 ```bash
 🪟: g++ -o main main.cpp -I ./include -lws2_32 ; ./main
-🐧: g++ -o main main.cpp -I ./include ; ./main
+🐧: g++ -o main main.cpp -I ./include          ; ./main
 ```
 
 ## License
-
-**Nodepp** is distributed under the MIT License. See the LICENSE file for more details.
+**Nodepp-torify** is distributed under the MIT License. See the LICENSE file for more details.
