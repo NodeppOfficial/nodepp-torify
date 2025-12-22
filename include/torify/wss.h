@@ -29,15 +29,12 @@ namespace nodepp { namespace torify { namespace wss {
         if(!generator::ws::client( hrv, uri ) )
           { skt.onConnect.skip(); return; }   
 
-        process::add([=](){ 
+        process::foop([=](){ 
+            cli.set_timeout(0); cli.resume(); 
             skt.onConnect.resume( );
             skt.onConnect.emit(cli); 
-            return -1;
-        });
+        return -1; });
 
-    }); skt.onConnect.once([=]( wss_t cli ){
-        cli.onDrain.once([=](){ cli.free(); });
-        cli.set_timeout(0); cli.resume(); stream::pipe(cli); 
     }); skt.connect( url::hostname(uri), url::port(uri) ); return skt; }
 
 }}}
