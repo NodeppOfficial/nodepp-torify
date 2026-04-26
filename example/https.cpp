@@ -1,24 +1,28 @@
 #include <nodepp/nodepp.h>
-#include <nodepp/fs.h>
-#include <https.h>
+#include <torify/https.h>
+#include <nodepp/url.h>
 
 using namespace nodepp;
 
 void onMain() {
+ 
+    torify_fetch_t args; ssl_t ssl;
+    args.timeout = 0; // Disable Fetch timeout
+    
+    args.proxy   = "tcp://localhost:9050"   ;
+    args.url     = "https://www.google.com/";
+    args.method  = "GET";
 
-    ssl_t ssl ( "ssl/cert.key", "ssl/cert.crt" );
-
-    tor_fetch_t args;
-    args.timeout = 0; // disable timeout
-    args.url     = "https://check.torproject.org/";
     args.headers = header_t({
-        { "host", "check.torproject.org" }
+        { "Host", url::hostname( args.url ) },
+        { "User-Agent", "Torify" }
     });
 
-    tor::https::fetch( args, &ssl )
+    torify::https::fetch( args, &ssl )
 
     .then([]( https_t cli ){
-        console::log( cli.read() );
+        auto data = stream::await( cli ).value();
+        console::log( ">>" , data );
     })
 
     .fail([]( except_t err ){
